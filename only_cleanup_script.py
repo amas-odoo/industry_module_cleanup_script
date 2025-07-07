@@ -186,13 +186,13 @@ registry.category("web_tour.tours").add("{ind_name}_knowledge_tour", {{
                                     dependency_info['eval'] = field.get("eval")
                                     record.remove(field)
                                     removed = True
-                            
+
                             if removed:
                                 dependencies_collection.append(dependency_info)
 
                     self.write_etree_content(file_path, etree_file_content)
 
-                old_record_ids = record_ids
+                    old_record_ids = record_ids
 
         return dependencies_collection
 
@@ -226,12 +226,12 @@ registry.category("web_tour.tours").add("{ind_name}_knowledge_tour", {{
                     field_xml += f"""<field name="{depend_list['field_name']}" ref="{depend_list['ref']}"/>"""
                 else:
                     field_xml += f"""<field name="{depend_list['field_name']}"/>"""
-                
+
                 data_file += f"""
     <record id="{depend_list['id']}" model="{depend_list['model']}">
         {field_xml}
     </record>
-                """
+"""
             elif depend_list['dir'] == 'demo':
                 field_xml = ""
                 if depend_list.get('eval'):
@@ -240,32 +240,32 @@ registry.category("web_tour.tours").add("{ind_name}_knowledge_tour", {{
                     field_xml += f"""<field name="{depend_list['field_name']}" ref="{depend_list['ref']}"/>"""
                 else:
                     field_xml += f"""<field name="{depend_list['field_name']}"/>"""
-                
+
                 demo_file += f"""
     <record id="{depend_list['id']}" model="{depend_list['model']}">
         {field_xml}
     </record>
 """
-        
+
         if data_file:
             content = f"""<?xml version='1.0' encoding='UTF-8'?>
 <odoo>
 {data_file}
 </odoo>
 """
-            
-            with open(destination_module_path + "/data/map_circular_dependencies.xml", 'w') as f:
+
+            with open(destination_module_path + "/data/record_creation_post.xml", 'w') as f:
                 f.write(content)
-        
+
         if demo_file:
             content = f"""<?xml version='1.0' encoding='UTF-8'?>
 <odoo>
 {demo_file}
 </odoo>
 """
-            with open(destination_module_path + "/demo/map_circular_dependencies.xml", 'w') as f:
+            with open(destination_module_path + "/demo/record_creation_post.xml", 'w') as f:
                 f.write(content)
-        
+
         return bool(data_file), bool(demo_file)
 
     def clean(self):
@@ -300,7 +300,7 @@ registry.category("web_tour.tours").add("{ind_name}_knowledge_tour", {{
         # Traverse the module directory recursively
         for root, dirs, files in os.walk(directory):
             current_dir = root.split(directory)[1] + '/'
-            
+
             # Recreate directory structure at the destination
             for d in dirs:
                 os.makedirs(destination_module_path + current_dir + d, exist_ok=True)
@@ -349,21 +349,21 @@ registry.category("web_tour.tours").add("{ind_name}_knowledge_tour", {{
                         
                         # Store metadata of demo files with records for later use
                         self.unorder_manifest_demo_files(manifest_demo_file_list, current_dir, file_name, ref_name_list, record)
-                        
+
                         model_name = record.get('model')
                         if not model_name:
                             continue
-                        
+
                         # Remove fields based on model-specific rules
                         content = self.remove_model_based_fields(model_name, content)
 
                         # Clean computed fields without inverse methods
                         content = self.remove_computed_fields(fields_info_dict, model_name, record, content)
-                    
+
                     # Special case handling for certain XML files
                     if file_name == 'ir_default.xml':
                         content = re.sub(r"<odoo>", '<odoo noupdate="1">', content)
-                    
+
                     # Write the processed XML content to the destination
                     Path(destination_module_path + current_dir + file_name).write_text(content, encoding='utf-8')
 
@@ -466,8 +466,8 @@ registry.category("web_tour.tours").add("{ind_name}_knowledge_tour", {{
         self.add_theme_immediate_install_function(destination_module_path)
 
         self.clean_sale_order_line_record(destination_module_path)
-        # Update demo file order in manifest
-        self.arrange_demo_files(destination_module_path,  manifest_demo_file_list, dependency_chains)
+        # Update manifest file
+        self.arrange_manifest_files(destination_module_path,  manifest_demo_file_list, dependency_chains)
 
         # Write mandatory files such as templates or init scripts
         for file, content in self.mandatory_files.items():
@@ -1176,7 +1176,7 @@ registry.category("web_tour.tours").add("{ind_name}_knowledge_tour", {{
         depends_list = sorted(set(depends_list + new_depends))
         return depends_list
 
-    def arrange_demo_files(self, destination_module_path, manifest_demo_file_list, dependency_chains):
+    def arrange_manifest_files(self, destination_module_path, manifest_demo_file_list, dependency_chains):
         """
         Finalizes the demo file arrangement and updates the __manifest__.py accordingly.
 
@@ -1245,10 +1245,10 @@ registry.category("web_tour.tours").add("{ind_name}_knowledge_tour", {{
         if dependencies_collection:
             flag_data, flag_demo = self.map_dependencies_files(destination_module_path, dependencies_collection)
             
-        if flag_data:
-            manifest['data'].append('data/map_circular_dependencies.xml')
-        if flag_demo:
-            manifest['demo'].append('demo/map_circular_dependencies.xml')
+            if flag_data:
+                manifest['data'].append('data/record_creation_post.xml')
+            if flag_demo:
+                manifest['demo'].append('demo/record_creation_post.xml')
 
         # Format the manifest dictionary as Python code
         lines = ["{"]
